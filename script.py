@@ -1,4 +1,9 @@
 """
+    Alexis Dupuis and Corentin Chauvin-Hameau
+    SYMOU - 2018
+
+    Utilitary script used to import a map from a bitmap and save it in a text
+    file.
 """
 import numpy as np
 import cv2
@@ -11,7 +16,7 @@ START = 2
 GOAL = 3
 
 
-def loadImageFromImage(path):
+def loadImage(path):
     """ Load an image and return its pixel matrix
     """
     image = cv2.imread(path, cv2.IMREAD_COLOR)
@@ -23,10 +28,14 @@ def loadImageFromImage(path):
 
 
 def getHeight(image):
+    """ Return the height of the image
+    """
     return len(image)
 
 
 def getWidth(image):
+    """ Return the width of the image
+    """
     return len(image[0])
 
 
@@ -42,6 +51,13 @@ def imageToTextMap(image):
     for i in range(height):
         for j in range(width):
             pixel = image[i][j]
+
+            for k in range(3):
+                # Filter a bit the image (avoid color compression problem)
+                if pixel[k] <= 5 and pixel[k] > 0:
+                    pixel[k] = 0
+                elif pixel[k] >= 250 and pixel[k] < 255:
+                    pixel[k] = 255
 
             if np.array_equal(pixel, [255, 255, 255]):
                 textMap[i][j] = VOID
@@ -97,15 +113,16 @@ def loadMapFromText(path):
     return textMap
 
 
+def imageToText(imagePath, textPath):
+    """ Load a map from a bitmap and save it in a text file
+    """
+    image = loadImage(imagePath)
+    textMap = imageToTextMap(image)
+    saveMapAsText(textPath, textMap)
 
-"""imagePath = "images/map1.bmp"
-image = loadImageFromImage(imagePath)
-textMap = imageToTextMap(image)
-saveMapAsText("images/textMap.txt", textMap)
-textMap2 = loadMapFromText("images/textMap.txt")
-saveMapAsText("images/textMap2.txt", textMap2)"""
 
 
+imageToText("images/map1.jpg", "images/textMap.txt")
 
 
 

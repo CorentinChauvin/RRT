@@ -223,7 +223,6 @@ def randomNode(T):
         node_qnew = Node(q)
         return node_qnear, node_qnew
 
-    print(".")
     return None, None
 
 
@@ -239,7 +238,8 @@ def extendRRT(T, node_qnear, node_qnew):
 
 
 def buildRRT(n, q0, qgoal):
-    growtree = 1  # which tree to grow
+    currentTree = 0
+    otherTree = 1
 
     # Initialisation of trees
     startNode = Node(q0)
@@ -255,57 +255,32 @@ def buildRRT(n, q0, qgoal):
 #        if i%(n//100)==0:
 #            print(i)
 
-        if growtree == 1:
-            (node_qnear, node_qnew) = randomNode(T1)
-            if not (node_qnew is None):
-                T1 = extendRRT(T1, node_qnear, node_qnew)
+        (node_qnear, node_qnew) = randomNode(T[currentTree])
+        if not (node_qnew is None):
+            T[currentTree] = extendRRT(T[currentTree], node_qnear, node_qnew)
 
-                # Try merging qnew to T2:
-                for node_q in T2:
-                    if (cart_dist(node_q.q[:2], node_qnew.q[:2]) < merge_threshold
-                        and not checkcollision(node_q.q, node_qnew.q)):
-                        node_qnew.neighbors.append(node_q)
-                        node_qnew.commands.append(0)  # <<<<<<<<<<<<<<<<<
-                        node_q.neighbors.append(node_qnew)
-                        node_q.commands.append(0)  # <<<<<<<<<<<<<<<<<
+            # Try merging qnew to the other tree:
+            for node_q in T[otherTree]:
+                if (cart_dist(node_q.q[:2], node_qnew.q[:2]) < merge_threshold
+                    and not checkcollision(node_q.q, node_qnew.q)):
+                    node_qnew.neighbors.append(node_q)
+                    node_qnew.commands.append(0)  # <<<<<<<<<<<<<<<<<
+                    node_q.neighbors.append(node_qnew)
+                    node_q.commands.append(0)  # <<<<<<<<<<<<<<<<<
 
-                        return [T1, T2]
+                    return T
 
-                # If you're here merging hasnt succeeded: swap trees and continue
-                growtree = 2    # <<<<<<<<<<<<<<<
+        # If you're here merging hasnt succeeded: swap trees and continue
+        currentTree = (currentTree + 1) % 2
+        otherTree = (otherTree + 1) % 2
 
-        else:
-            (node_qnear, node_qnew) = randomNode(T2)
-            if not (node_qnew is None):
-                T2 = extendRRT(T2, node_qnear, node_qnew)
-
-                # Try merging qnew to T1:
-                for node_q in T1:
-                    if (cart_dist(node_q.q[:2], node_qnew.q[:2]) < merge_threshold
-                        and not checkcollision(node_q.q, node_qnew.q)):
-                        node_qnew.neighbors.append(node_q)
-                        node_qnew.commands.append(0)  # <<<<<<<<<<<<<<<<<
-                        node_q.neighbors.append(node_qnew)
-                        node_q.commands.append(0)  # <<<<<<<<<<<<<<<<<
-
-                        return [T1, T2]
-
-                # If you're here merging hasnt succeeded: swap trees and continue
-                growtree = 1    # <<<<<<<<<<<<<<<
 
     print("Nope------------")
-    return [T1, T2]
+    return T
 
 
 def displayTree(T1, T2):
     global textMap
-
-    """fig = plt.figure()
-    ax = fig.add_subplot(111)
-    x = [[0,0,0,0,0,0],[0,0,0,0,0,0], [0,1,1,2,1,1], [0,2,3,0,0,1], [0,1,1,1,1,1]]
-
-    # Display matrix
-    cax = ax.matshow(x,cmap=cmap)"""
 
     # Initialise map matrix
     mapMatrix = deepcopy(textMap)
@@ -325,19 +300,13 @@ def displayTree(T1, T2):
     [x, y] = PIXspace(T2[0].q)
     mapMatrix[x][y] = 3
 
-
     # Display matrix
     cmap = ListedColormap(['w', 'k', 'r', 'g', 'r', 'y', 'b'])
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.matshow(mapMatrix,cmap=cmap)
+    ax.matshow(mapMatrix, cmap=cmap)
 
 
-
-
-
-[T1, T2] = buildRRT(4000, (35, 30, 0, 0), (1, 1, 1, 0))
+[T1, T2] = buildRRT(6000, (35, 30, 0, 0), (1, 1, 1, 0))
 
 displayTree(T1, T2)
-
-

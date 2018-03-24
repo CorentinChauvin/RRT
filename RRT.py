@@ -80,6 +80,8 @@ Ypix = len(textMap)
 
 discriminant = 2.0  # minimal distance between points
 
+maxMergesNumber = 5  # Maximum of merges before stopping the algorithm
+
 ###
 
 
@@ -210,16 +212,17 @@ def randomNode(T):
         beta = beta % (2*pi)
         theta = theta % (2*pi)
 
-
-#    if globalSuccess:
+    q = [x, y, theta, beta]
+#
+#    if success:
 #        # Check whether the resulting node is not too near from an existing one
 #        for node in T:
-#            if cart_dist(node.q, q) < discriminant:
-#                globalSuccess = False
+#            if cart_dist(node.q, q) < 0.1:
+#                success = False
+#                break
 
     if success:
         # Create the resulting node
-        q = [x, y, theta, beta]
         node_qnew = Node(q)
         return node_qnear, node_qnew
 
@@ -238,22 +241,24 @@ def extendRRT(T, node_qnear, node_qnew):
 
 
 def buildRRT(n, q0, qgoal):
-    currentTree = 0
-    otherTree = 1
+    """
+    """
 
     # Initialisation of trees
     startNode = Node(q0)
     endNode = Node(qgoal)
 
-    T1 = [startNode]
-    T2 = [endNode]
+    T = [[startNode], [endNode]]
 
-    T = [T1, T2]
+    currentTree = 0  # Tree to grow
+    otherTree = 1
+
+    mergesNumber = 0  # Number of merges achieved
 
     # Main loop
-    for i in range(n):
-#        if i%(n//100)==0:
-#            print(i)
+    i = 0
+    while i < n and mergesNumber < maxMergesNumber:
+        i = i + 1
 
         (node_qnear, node_qnew) = randomNode(T[currentTree])
         if not (node_qnew is None):
@@ -263,19 +268,23 @@ def buildRRT(n, q0, qgoal):
             for node_q in T[otherTree]:
                 if (cart_dist(node_q.q[:2], node_qnew.q[:2]) < merge_threshold
                     and not checkcollision(node_q.q, node_qnew.q)):
+
                     node_qnew.neighbors.append(node_q)
                     node_qnew.commands.append(0)  # <<<<<<<<<<<<<<<<<
                     node_q.neighbors.append(node_qnew)
                     node_q.commands.append(0)  # <<<<<<<<<<<<<<<<<
 
-                    return T
+                    mergesNumber = mergesNumber + 1
+
+                    break
 
         # If you're here merging hasnt succeeded: swap trees and continue
         currentTree = (currentTree + 1) % 2
         otherTree = (otherTree + 1) % 2
 
 
-    print("Nope------------")
+    print("Number of merges : {}".format(mergesNumber))
+
     return T
 
 

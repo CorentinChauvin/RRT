@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 """
     Alexis Dupuis and Corentin Chauvin-Hameau
     SYMOU - 2018

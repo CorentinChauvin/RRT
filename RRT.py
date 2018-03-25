@@ -1,88 +1,40 @@
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Adaptation du RRT à un robot (1,1)
+    Alexis Dupuis and Corentin Chauvin-Hameau
+    SYMOU - 2018
 
-Plutôt que de verifier si une configuration tirée est atteignable, on va
-fabriquer une configuration atteignable, en tirant une commande et en
-l'appliquant à un noeud random de l'arbre.
-
-Puis on testera si le point XY atteint n'entre pas en collision avec un
-obstacle...
+    Adaptation of the RRT algorithm for a (1, 1) mobile robot
 """
-# (x,y,theta,beta)
 
 import random as rd
-from math import sqrt, cos, sin, tan, pi, atan2
+from math import sqrt, cos, sin, tan, pi
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from copy import deepcopy
+from a_star import Node, a_star
+from map_utilitary import loadMapFromText
 
 
+# Global variables
+step_size = 0.5         # number of seconds we apply the command
+merge_threshold = 0.5   # cartesian distance needed between two nodes needed to merge
+Ne = 100    # number of integration steps for the command
+Nc = 10     # number of steps for the collision detection
 
-#######
-
-class Node:
-    def __init__(self, q=None):
-        if q is None:
-            self.q = [0, 0, 0, 0]
-        else:
-            self.q = q
-        self.neighbors = []
-        self.commands = []  # For each neighbor, the command to reach it
-
-
-def loadMapFromText(path):
-    """ Load an image and return its text representation
-    """
-    mapFile = open(path, 'r')
-
-    if mapFile is None:
-        print("Map file couldn't be opened")
-        return None
-
-    textMap = []
-
-    for line in mapFile:
-        textMap.append([])
-        for c in line:
-            if c != '\n':
-                textMap[-1].append(int(c))
-
-    return textMap
-
-
-######
-
-
-# Global variables:
-VOID = 0
-OBSTACLE = 1
-START = 2
-GOAL = 3
-
-step_size = 0.5   # nbr de secondes durant lesquelles on applique la consigne
-merge_threshold = 0.5
-Ne = 100  # nbr de pas d'integration pour l'application de la commande
-Nc = 10  # nbr de pas pour la detection de collision
-
-Vmax = 1.0
-BETA_POINTmax = 1.0/step_size
-L = 1.5
-a = 0.5
-d = 0.1
-
-Xmax = 50
-Ymax = 50
+Vmax = 1.0  # maximum velocity of the robot
+L = 1.5     # half the distance between the two fixed wheels
+a = 0.5     # distance between the centers of two fixed wheels and the steering wheel
+d = 0.1     # distance between the steering wheel and the "sugar" (controlled point)
 
 textMap = loadMapFromText("images/textMap.txt")
-Xpix = len(textMap[0])
+Xmax = 50               # dimensions of the map in meters
+Ymax = 50
+Xpix = len(textMap[0])  # dimensions of the map in pixels
 Ypix = len(textMap)
 
-discriminant = 2.0  # minimal distance between points
-
-maxMergesNumber = 5  # Maximum of merges before stopping the algorithm
-
-###
+discriminant = 0.5      # minimal cartesian distance between nodes
+maxMergesNumber = 20    # maximum of merges before stopping the algorithm
 
 
 def XYspace(q):
@@ -166,7 +118,7 @@ def randomNode(T):
             bestNode = node
 
     q_near = bestNode.q
-    node_qnear = Node(q_near)
+    node_qnear = bestNode
 
     # Compute the desired velocity of the sugar
     sugarPos = sugarPosition(q_near, a, d)
@@ -213,13 +165,13 @@ def randomNode(T):
         theta = theta % (2*pi)
 
     q = [x, y, theta, beta]
-#
-#    if success:
-#        # Check whether the resulting node is not too near from an existing one
-#        for node in T:
-#            if cart_dist(node.q, q) < 0.1:
-#                success = False
-#                break
+
+    if success:
+        # Check whether the resulting node is not too near from an existing one
+        for node in T:
+            if cart_dist(node.q, q) < discriminant:
+                success = False
+                break
 
     if success:
         # Create the resulting node
@@ -230,18 +182,18 @@ def randomNode(T):
 
 
 def extendRRT(T, node_qnear, node_qnew):
+    """ Extend the tree T given the nodes of qnear and qnew
+        Add also a link between these two nodes
+    """
+
     T.append(node_qnew)
 
     node_qnear.neighbors.append(node_qnew)
-    node_qnear.commands.append(0)  # <<<<<<<<<<<<< To complete
     node_qnew.neighbors.append(node_qnear)
-    node_qnew.commands.append(0)    # <<<<<<<<<<<<<
-
-    return T
 
 
 def buildRRT(n, q0, qgoal):
-    """
+    """ Perform the RRT algorithm
     """
 
     # Initialisation of trees
@@ -259,36 +211,36 @@ def buildRRT(n, q0, qgoal):
     i = 0
     while i < n and mergesNumber < maxMergesNumber:
         i = i + 1
-
         (node_qnear, node_qnew) = randomNode(T[currentTree])
-        if not (node_qnew is None):
-            T[currentTree] = extendRRT(T[currentTree], node_qnear, node_qnew)
 
-            # Try merging qnew to the other tree:
+        if not (node_qnew is None):
+            extendRRT(T[currentTree], node_qnear, node_qnew)
+
+            # Try to merge qnew to the other tree:
             for node_q in T[otherTree]:
                 if (cart_dist(node_q.q[:2], node_qnew.q[:2]) < merge_threshold
                     and not checkcollision(node_q.q, node_qnew.q)):
 
                     node_qnew.neighbors.append(node_q)
-                    node_qnew.commands.append(0)  # <<<<<<<<<<<<<<<<<
                     node_q.neighbors.append(node_qnew)
-                    node_q.commands.append(0)  # <<<<<<<<<<<<<<<<<
 
                     mergesNumber = mergesNumber + 1
-
                     break
 
-        # If you're here merging hasnt succeeded: swap trees and continue
+        # If you're here merging hasn't succeeded: swap trees and continue
         currentTree = (currentTree + 1) % 2
         otherTree = (otherTree + 1) % 2
 
 
     print("Number of merges : {}".format(mergesNumber))
-
     return T
 
 
-def displayTree(T1, T2):
+def displayTree(T1, T2, path=None):
+    """ Display the two trees
+        If path is given, display also the path generated by A*
+    """
+
     global textMap
 
     # Initialise map matrix
@@ -303,19 +255,36 @@ def displayTree(T1, T2):
         [x, y] = PIXspace(node.q)
         mapMatrix[x][y] = 6
 
+    # Display path on an other image
+    pathMatrix = deepcopy(mapMatrix)
+    if path is not None:
+        for node in path:
+            [x, y] = PIXspace(node.q)
+            pathMatrix[x][y] = 7
+
     # Fill start and goal
     [x, y] = PIXspace(T1[0].q)
     mapMatrix[x][y] = 2
+    pathMatrix[x][y] = 2
     [x, y] = PIXspace(T2[0].q)
     mapMatrix[x][y] = 3
+    pathMatrix[x][y] = 3
 
-    # Display matrix
-    cmap = ListedColormap(['w', 'k', 'r', 'g', 'r', 'y', 'b'])
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.matshow(mapMatrix, cmap=cmap)
+    # Display image without path
+    fig = plt.figure(1)
+    cmap1 = ListedColormap(['w', 'k', 'r', 'g', 'r', 'y', 'b'])
+    ax1 = fig.add_subplot(121)
+    ax1.matshow(mapMatrix, cmap=cmap1)
+
+    # Display image with path
+    cmap2 = ListedColormap(['w', 'k', 'r', 'g', 'r', 'y', 'b', 'grey'])
+    ax2 = fig.add_subplot(122)
+    ax2.matshow(pathMatrix, cmap=cmap2)
 
 
-[T1, T2] = buildRRT(6000, (35, 30, 0, 0), (1, 1, 1, 0))
 
-displayTree(T1, T2)
+[T1, T2] = buildRRT(5000, [35, 30, 0, 0], [1, 1, 1, 0])
+T = T1 + T2
+path = a_star(T, [35, 30, 0, 0], [1, 1, 1, 0])
+
+displayTree(T1, T2, path)

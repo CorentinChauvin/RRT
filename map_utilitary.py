@@ -124,7 +124,7 @@ def imageToText(imagePath, textPath):
 
 
 
-imageToText("images/map1.jpg", "images/textMap.txt")
+imageToText("images/map2.jpg", "images/textMap2.txt")
 
 
 

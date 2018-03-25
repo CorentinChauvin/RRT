@@ -28,9 +28,9 @@ L = 1.5     # half the distance between the two fixed wheels
 a = 0.5     # distance between the centers of two fixed wheels and the steering wheel
 d = 0.1     # distance between the steering wheel and the "sugar" (controlled point)
 
-textMap = loadMapFromText("images/textMap.txt")
-Xmax = 50               # dimensions of the map in meters
-Ymax = 50
+textMap = loadMapFromText("images/textMap2.txt")
+Xmax = 500               # dimensions of the map in meters
+Ymax = 500
 Xpix = len(textMap[0])  # dimensions of the map in pixels
 Ypix = len(textMap)
 
@@ -217,6 +217,7 @@ def buildRRT(n, q0, qgoal):
     # Main loop
     i = 0
     while i < n and mergesNumber < maxMergesNumber:
+        print(i)
         i = i + 1
         (node_qnear, node_qnew) = randomNode(T[currentTree])
 
@@ -292,11 +293,11 @@ def displayTree(T1, T2, path=None):
 
 
 startTime = clock()
-[T1, T2] = buildRRT(10000, [35, 30, 0, 0], [1, 1, 1, 0])
+[T1, T2] = buildRRT(300000, [1, 1, 1, 0], [490, 490, 1, 1])
 RRTTime = clock()
 
 T = T1 + T2
-path = a_star(T, [35, 30, 0, 0], [1, 1, 1, 0])
+path = a_star(T, [1, 1, 1, 0], [490, 490, 1, 1])
 a_starTime = clock()
 
 displayTree(T1, T2, path)

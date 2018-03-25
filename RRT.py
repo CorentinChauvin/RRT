@@ -9,6 +9,7 @@
 
 import random as rd
 from math import sqrt, cos, sin, tan, pi
+from time import clock
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from copy import deepcopy
@@ -33,8 +34,9 @@ Ymax = 50
 Xpix = len(textMap[0])  # dimensions of the map in pixels
 Ypix = len(textMap)
 
-discriminant = 0.5      # minimal cartesian distance between nodes
-maxMergesNumber = 20    # maximum of merges before stopping the algorithm
+discriminant = 0.15         # minimal cartesian distance between nodes
+discriminantRefusals = 0    # number of refusals due to discriminant
+maxMergesNumber = 20        # maximum of merges before stopping the algorithm
 
 
 def XYspace(q):
@@ -98,6 +100,8 @@ def sugarPosition(q, a, d):
 def randomNode(T):
     """ Choose a random command and apply it to a node
     """
+
+    global discriminantRefusals
 
     # Pick a random config
     x_rand = rd.random()*Xmax
@@ -171,6 +175,7 @@ def randomNode(T):
         for node in T:
             if cart_dist(node.q, q) < discriminant:
                 success = False
+                discriminantRefusals = discriminantRefusals + 1
                 break
 
     if success:
@@ -195,6 +200,8 @@ def extendRRT(T, node_qnear, node_qnew):
 def buildRRT(n, q0, qgoal):
     """ Perform the RRT algorithm
     """
+
+    global discriminantRefusals
 
     # Initialisation of trees
     startNode = Node(q0)
@@ -233,6 +240,7 @@ def buildRRT(n, q0, qgoal):
 
 
     print("Number of merges : {}".format(mergesNumber))
+    print("Discriminant refusals : {}".format(discriminantRefusals))
     return T
 
 
@@ -283,8 +291,15 @@ def displayTree(T1, T2, path=None):
 
 
 
-[T1, T2] = buildRRT(5000, [35, 30, 0, 0], [1, 1, 1, 0])
+startTime = clock()
+[T1, T2] = buildRRT(10000, [35, 30, 0, 0], [1, 1, 1, 0])
+RRTTime = clock()
+
 T = T1 + T2
 path = a_star(T, [35, 30, 0, 0], [1, 1, 1, 0])
+a_starTime = clock()
 
 displayTree(T1, T2, path)
+
+print("RRT execution time : {}".format(RRTTime - startTime))
+print("A* execution time : {}".format(a_starTime - RRTTime))
